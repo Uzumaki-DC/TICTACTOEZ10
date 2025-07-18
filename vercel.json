@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist/public"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/sessions/([^/]+)/join",
+      "dest": "/api/sessions-join.js"
+    },
+    {
+      "src": "/api/sessions/([^/]+)/move",
+      "dest": "/api/sessions-move.js"
+    },
+    {
+      "src": "/api/sessions/([^/]+)/reset",
+      "dest": "/api/sessions-reset.js"
+    },
+    {
+      "src": "/api/sessions/([^/]+)",
+      "dest": "/api/sessions-get.js"
+    },
+    {
+      "src": "/api/sessions",
+      "dest": "/api/sessions.js"
+    },
+    {
+      "src": "/api/health",
+      "dest": "/api/health.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/public/$1"
+    }
+  ]
+}
