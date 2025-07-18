@@ -14,46 +14,65 @@ import { generateAIMove } from "@/lib/aiPlayer";
 import { checkWinner, isDraw } from "@/lib/gameLogic";
 import { GameSession } from "@shared/schema";
 
-export type GameMode = 'menu' | 'single-player' | 'multiplayer-menu' | 'multiplayer-host' | 'multiplayer-join' | 'multiplayer-game';
+export type GameMode =
+  | "menu"
+  | "single-player"
+  | "multiplayer-menu"
+  | "multiplayer-host"
+  | "multiplayer-join"
+  | "multiplayer-game";
 
 export default function GamePage() {
-  const [gameMode, setGameMode] = useState<GameMode>('menu');
-  const [gameBoard, setGameBoard] = useState<(string | null)[]>(Array(9).fill(null));
-  const [currentPlayer, setCurrentPlayer] = useState<'X' | 'O'>('X');
-  const [gameStatus, setGameStatus] = useState<'playing' | 'finished'>('playing');
-  const [winner, setWinner] = useState<'X' | 'O' | 'draw' | null>(null);
+  const [gameMode, setGameMode] = useState<GameMode>("menu");
+  const [gameBoard, setGameBoard] = useState<(string | null)[]>(
+    Array(9).fill(null)
+  );
+  const [currentPlayer, setCurrentPlayer] = useState<"X" | "O">("X");
+  const [gameStatus, setGameStatus] = useState<"playing" | "finished">(
+    "playing"
+  );
+  const [winner, setWinner] = useState<"X" | "O" | "draw" | null>(null);
   const [scores, setScores] = useState({ player1: 0, player2: 0, draws: 0 });
   const [showResult, setShowResult] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionCode, setSessionCode] = useState<string>('');
+  const [sessionCode, setSessionCode] = useState<string>("");
   const [isHost, setIsHost] = useState(false);
   const [playerId] = useState(() => Math.random().toString(36).substr(2, 9));
   const [session, setSession] = useState<GameSession | null>(null);
-  
-  const { session: realtimeSession, isConnected, connectionType, joinSession, makeMove: realtimeMakeMove, resetGame: realtimeResetGame } = useSupabaseRealtime(sessionCode);
+
+  const {
+    session: realtimeSession,
+    isConnected,
+    connectionType,
+    joinSession,
+    makeMove: realtimeMakeMove,
+    resetGame: realtimeResetGame,
+  } = useSupabaseRealtime(sessionCode);
   const { playSound } = useSound();
 
   // Update game state from session data (used by both WebSocket and HTTP polling)
   const updateGameFromSession = (sessionData: GameSession) => {
     setSession(sessionData);
-    
+
     // Update game board
-    const board = sessionData.gameBoard.split(',').map((cell: string) => cell === 'null' ? null : cell);
+    const board = sessionData.gameBoard
+      .split(",")
+      .map((cell: string) => (cell === "null" ? null : cell));
     setGameBoard(board);
-    setCurrentPlayer(sessionData.currentPlayer as 'X' | 'O');
-    setGameStatus(sessionData.gameStatus as 'playing' | 'finished');
-    setWinner(sessionData.winner as 'X' | 'O' | 'draw' | null);
-    
+    setCurrentPlayer(sessionData.currentPlayer as "X" | "O");
+    setGameStatus(sessionData.gameStatus as "playing" | "finished");
+    setWinner(sessionData.winner as "X" | "O" | "draw" | null);
+
     // Update scores
     setScores({
       player1: sessionData.hostScore,
       player2: sessionData.guestScore,
-      draws: sessionData.draws
+      draws: sessionData.draws,
     });
-    
-    if (sessionData.gameStatus === 'finished') {
+
+    if (sessionData.gameStatus === "finished") {
       setShowResult(true);
-      playSound(sessionData.winner === 'draw' ? 'draw' : 'win');
+      playSound(sessionData.winner === "draw" ? "draw" : "win");
     }
   };
 
@@ -65,103 +84,105 @@ export default function GamePage() {
   }, [realtimeSession, playSound]);
 
   const handleCellClick = (index: number) => {
-    if (gameBoard[index] || gameStatus === 'finished') return;
-    
-    playSound('move');
-    
-    if (gameMode === 'single-player') {
+    if (gameBoard[index] || gameStatus === "finished") return;
+
+    playSound("move");
+
+    if (gameMode === "single-player") {
       // Single player mode
       const newBoard = [...gameBoard];
       newBoard[index] = currentPlayer;
       setGameBoard(newBoard);
-      
+
       const gameWinner = checkWinner(newBoard);
       if (gameWinner) {
         setWinner(gameWinner);
-        setGameStatus('finished');
+        setGameStatus("finished");
         setShowResult(true);
-        setScores(prev => ({
+        setScores((prev) => ({
           ...prev,
-          [gameWinner === 'X' ? 'player1' : 'player2']: prev[gameWinner === 'X' ? 'player1' : 'player2'] + 1
+          [gameWinner === "X" ? "player1" : "player2"]:
+            prev[gameWinner === "X" ? "player1" : "player2"] + 1,
         }));
-        playSound(gameWinner === 'X' ? 'win' : 'lose');
+        playSound(gameWinner === "X" ? "win" : "lose");
       } else if (isDraw(newBoard)) {
-        setWinner('draw');
-        setGameStatus('finished');
+        setWinner("draw");
+        setGameStatus("finished");
         setShowResult(true);
-        setScores(prev => ({ ...prev, draws: prev.draws + 1 }));
-        playSound('draw');
+        setScores((prev) => ({ ...prev, draws: prev.draws + 1 }));
+        playSound("draw");
       } else {
-        setCurrentPlayer('O');
-        
+        setCurrentPlayer("O");
+
         // AI move
         setTimeout(() => {
           const aiMove = generateAIMove(newBoard);
           if (aiMove !== -1) {
             const aiBoard = [...newBoard];
-            aiBoard[aiMove] = 'O';
+            aiBoard[aiMove] = "O";
             setGameBoard(aiBoard);
-            
+
             const aiWinner = checkWinner(aiBoard);
             if (aiWinner) {
               setWinner(aiWinner);
-              setGameStatus('finished');
+              setGameStatus("finished");
               setShowResult(true);
-              setScores(prev => ({
+              setScores((prev) => ({
                 ...prev,
-                [aiWinner === 'X' ? 'player1' : 'player2']: prev[aiWinner === 'X' ? 'player1' : 'player2'] + 1
+                [aiWinner === "X" ? "player1" : "player2"]:
+                  prev[aiWinner === "X" ? "player1" : "player2"] + 1,
               }));
-              playSound(aiWinner === 'X' ? 'win' : 'lose');
+              playSound(aiWinner === "X" ? "win" : "lose");
             } else if (isDraw(aiBoard)) {
-              setWinner('draw');
-              setGameStatus('finished');
+              setWinner("draw");
+              setGameStatus("finished");
               setShowResult(true);
-              setScores(prev => ({ ...prev, draws: prev.draws + 1 }));
-              playSound('draw');
+              setScores((prev) => ({ ...prev, draws: prev.draws + 1 }));
+              playSound("draw");
             } else {
-              setCurrentPlayer('X');
+              setCurrentPlayer("X");
             }
           }
         }, 500);
       }
-    } else if (gameMode === 'multiplayer-game') {
+    } else if (gameMode === "multiplayer-game") {
       // Multiplayer mode - use real-time system
       try {
         realtimeMakeMove(index, playerId);
       } catch (error) {
-        console.error('Failed to make move:', error);
+        console.error("Failed to make move:", error);
         // You could show an error toast here
       }
     }
   };
 
   const resetGameLocal = () => {
-    if (gameMode === 'multiplayer-game') {
+    if (gameMode === "multiplayer-game") {
       try {
         realtimeResetGame();
       } catch (error) {
-        console.error('Failed to reset game:', error);
+        console.error("Failed to reset game:", error);
       }
     } else {
       setGameBoard(Array(9).fill(null));
-      setCurrentPlayer('X');
-      setGameStatus('playing');
+      setCurrentPlayer("X");
+      setGameStatus("playing");
       setWinner(null);
       setShowResult(false);
     }
-    playSound('click');
+    playSound("click");
   };
 
   const exitGame = () => {
-    setGameMode('menu');
+    setGameMode("menu");
     setGameBoard(Array(9).fill(null));
-    setCurrentPlayer('X');
-    setGameStatus('playing');
+    setCurrentPlayer("X");
+    setGameStatus("playing");
     setWinner(null);
     setShowResult(false);
-    setSessionCode('');
+    setSessionCode("");
     setSession(null);
-    playSound('click');
+    playSound("click");
   };
 
   return (
@@ -173,86 +194,80 @@ export default function GamePage() {
             <i className="fas fa-gamepad mr-2"></i>
             TIC TAC TOE
           </h1>
-          <p className="text-lg text-gray-300 font-inter">Enter the Digital Arena</p>
+          <p className="text-lg text-gray-300 font-inter">
+            Enter the Digital Arena
+          </p>
           <div className="w-24 h-1 bg-gradient-to-r from-cyber-cyan to-cyber-purple mx-auto mt-2 rounded-full"></div>
         </header>
 
         {/* Game Mode Selection */}
-        {gameMode === 'menu' && (
+        {gameMode === "menu" && (
           <GameModeSelector
             onSelectSinglePlayer={() => {
-              setGameMode('single-player');
-              playSound('click');
+              setGameMode("single-player");
+              playSound("click");
             }}
             onSelectMultiplayer={() => {
-              setGameMode('multiplayer-menu');
-              playSound('click');
+              setGameMode("multiplayer-menu");
+              playSound("click");
             }}
           />
         )}
 
         {/* Multiplayer Options */}
-        {gameMode === 'multiplayer-menu' && (
+        {gameMode === "multiplayer-menu" && (
           <MultiplayerOptions
             onHostSession={() => {
-              setGameMode('multiplayer-host');
+              setGameMode("multiplayer-host");
               setIsHost(true);
-              playSound('click');
+              playSound("click");
             }}
             onJoinSession={() => {
-              setGameMode('multiplayer-join');
+              setGameMode("multiplayer-join");
               setIsHost(false);
-              playSound('click');
+              playSound("click");
             }}
             onBack={() => {
-              setGameMode('menu');
-              playSound('click');
+              setGameMode("menu");
+              playSound("click");
             }}
           />
         )}
 
         {/* Session Manager */}
-        {(gameMode === 'multiplayer-host' || gameMode === 'multiplayer-join') && (
+        {(gameMode === "multiplayer-host" ||
+          gameMode === "multiplayer-join") && (
           <SessionManager
             mode={gameMode}
             sessionCode={sessionCode}
             playerId={playerId}
             onSessionCreated={async (code) => {
               setSessionCode(code);
-              setGameMode('multiplayer-game');
-              // Join the real-time session
-              try {
-                await joinSession(playerId);
-              } catch (error) {
-                console.error('Failed to join created session:', error);
-                // Reset back to host mode if failed
-                setGameMode('multiplayer-host');
-                setSessionCode('');
-              }
+              setGameMode("multiplayer-game");
             }}
             onSessionJoined={async (code) => {
               setSessionCode(code);
-              setGameMode('multiplayer-game');
+              setGameMode("multiplayer-game");
               // Join the real-time session
               try {
-                await joinSession(playerId);
+                await joinSession(playerId, code);
               } catch (error) {
-                console.error('Failed to join session:', error);
+                console.error("Failed to join session:", error);
                 // Reset back to join mode if failed
-                setGameMode('multiplayer-join');
-                setSessionCode('');
+                setGameMode("multiplayer-join");
+                setSessionCode("");
               }
             }}
             onBack={() => {
-              setGameMode('multiplayer-menu');
-              playSound('click');
+              setGameMode("multiplayer-menu");
+              playSound("click");
             }}
             setIsLoading={setIsLoading}
           />
         )}
 
         {/* Game Board */}
-        {(gameMode === 'single-player' || gameMode === 'multiplayer-game') && (
+        {(gameMode === "single-player" || gameMode === "multiplayer-game") && (
           <div className="flex flex-col items-center space-y-4">
             <GameBoard
               gameBoard={gameBoard}
@@ -261,7 +276,7 @@ export default function GamePage() {
               onCellClick={handleCellClick}
               onReset={resetGameLocal}
               onExit={exitGame}
-              isMultiplayer={gameMode === 'multiplayer-game'}
+              isMultiplayer={gameMode === "multiplayer-game"}
               isHost={isHost}
               session={session}
             />
@@ -279,9 +294,12 @@ export default function GamePage() {
         )}
 
         {isLoading && <LoadingScreen />}
-        
-        {gameMode === 'multiplayer-game' && (
-          <ConnectionStatus isConnected={isConnected} connectionType={connectionType} />
+
+        {gameMode === "multiplayer-game" && (
+          <ConnectionStatus
+            isConnected={isConnected}
+            connectionType={connectionType}
+          />
         )}
       </div>
     </div>
